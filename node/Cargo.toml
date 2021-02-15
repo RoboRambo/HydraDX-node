@@ -47,7 +47,7 @@ sc-consensus-epochs = '0.8.0'
 sc-consensus-slots = '0.8.0'
 sc-executor = {features = ['wasmtime'], version = '0.8.0'}
 sc-finality-grandpa = '=0.8.0'
-sc-finality-grandpa-rpc = '=0.8.0'
+sc-finality-grandpa-rpc = '=0.8.1'
 sc-keystore = '2.0.0'
 sc-network = '0.8.0'
 sc-rpc = '2.0.0'

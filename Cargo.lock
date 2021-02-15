@@ -5775,9 +5775,9 @@ dependencies = [
 
 [[package]]
 name = "sc-finality-grandpa-rpc"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9d8c6b8454772f8ef3835c0297319c250103d7a3fba0406238c0d63b9c2f88e"
+checksum = "03ea0e17531f6615df0778a559dd5b33c5c7b5b4ac847dce9a79bc32e3a39340"
 dependencies = [
  "derive_more",
  "finality-grandpa",
