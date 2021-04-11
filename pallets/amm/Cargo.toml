@@ -23,7 +23,7 @@ version = '2.0.0'
 
 [dependencies]
 primitive-types = {default-features = false, version = '0.8.0'}
-serde = {features = ['derive'], optional = true, version = '1.0.101'}
+serde = {features = ['derive'], optional = true, version = '1.0.125'}
 
 hydra-dx-math = {default-features = false, version = "1.0.0", git = "https://github.com/galacticcouncil/hydraDX-math", tag="v1.0.0"}
 
