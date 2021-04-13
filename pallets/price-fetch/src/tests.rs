@@ -61,7 +61,9 @@ fn fetch_price_req_should_work() {
 #[test]
 fn start_new_fetcher_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default())));
+		let symbol: &[u8; 3] = b"ETH";
+		let duration = 600u32;
+		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
 
 		let key = b"ETH";
 		let should_be_fetcher = Fetcher {
@@ -79,10 +81,13 @@ fn start_new_fetcher_should_work() {
 #[test]
 fn start_existing_fetcher_should_fail() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default())));
+		//assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default())));
+		let symbol: &[u8; 3] = b"ETH";
+		let duration = 600u32;
+		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
 
 		assert_noop!(
-			PriceFetch::start_fetcher(Origin::signed(Default::default())),
+			PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration),
 			Error::<Test>::FetcherAlreadyExist
 		);
 	})

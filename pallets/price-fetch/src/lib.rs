@@ -35,7 +35,7 @@ use alt_serde::{Deserialize, Deserializer};
 pub type Symbol = Vec<u8>;
 
 //TODO: this should be a param to start_fetcher(symbol, duration) function
-const SYM: &[u8; 3] = b"ETH";
+//const SYM: &[u8; 3] = b"ETH";
 pub const SYMBOLS: [(&[u8], &[u8]); 1] = [(b"ETH", b"https://api.diadata.org/v1/quotation/ETH")];
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
@@ -179,27 +179,27 @@ pub mod pallet {
         ///Start fetching price for 600 blocks
         //TODO: add fetched duration and symbol
         #[pallet::weight((0, Pays::No))]
-        pub fn start_fetcher(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn start_fetcher(origin: OriginFor<T>, symbol: [u8; 3], duration: u32) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(!<Fetchers<T>>::contains_key(&SYM.to_vec()), Error::<T>::FetcherAlreadyExist);
+            ensure!(!<Fetchers<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExist);
 
             //TODO: duration should be param of function
-            let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(600u32); //600 blocs is 1hour at 1 block/6s
-            let url = match SYMBOLS.iter().find(|(s, _)| s == SYM) {
+            let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(duration); //600 blocs is 1hour at 1 block/6s
+            let url = match SYMBOLS.iter().find(|(s, _)| s == &symbol) {
                 Some (p) => Ok(p.1),
                 None => Err(Error::<T>::SymbolNotFound)
             }?;
 
             let new_fetcher = Fetcher {
-                symbol: SYM.to_vec(),
+                symbol: symbol.to_vec(),
                 end_fetching_at: end_at,
                 url: url.to_vec()
             };
 
-            <Fetchers<T>>::insert(SYM.to_vec(), new_fetcher);
+            <Fetchers<T>>::insert(symbol.to_vec(), new_fetcher);
 
             let now = <pallet_timestamp::Pallet<T>>::get();
-            Self::deposit_event(Event::NewFetcher(who, SYM.to_vec(), now));
+            Self::deposit_event(Event::NewFetcher(who, symbol.to_vec(), now));
 
             Ok(().into())
         }
