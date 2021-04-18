@@ -37,6 +37,7 @@ pub type Symbol = Vec<u8>;
 //TODO: this should be a param to start_fetcher(symbol, duration) function
 //const SYM: &[u8; 3] = b"ETH";
 pub const SYMBOLS: [(&[u8], &[u8]); 1] = [(b"ETH", b"https://api.diadata.org/v1/quotation/ETH")];
+const DECIMAL_DIGITS: u128 = 1_000_000_000_000_000_000_u128;
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct Fetcher<BlockNumber> {
@@ -86,8 +87,9 @@ where
 	//TODO: CONST -> DECIMAL PLACES FOR PRICE.
 	//		This will depend on the type used in our case sp_runtime::FixedU128
 	//TODO: Make sure this doesn't overflow
-	let int = (fp * (1_000_000_000_000_000_000_f64)) as u128;
-	Ok(Price::from_inner(int))
+	//let result = (fp as u128).checked_mul(DECIMAL_DIGITS).ok_or(Error::Overflow)?;
+	let result = (fp as u128).checked_mul(DECIMAL_DIGITS);
+	Ok(Price::from_inner(result.unwrap()))
 }
 
 #[cfg(test)]
@@ -145,6 +147,7 @@ pub mod pallet {
         FetcherAlreadyExist,
         //start fetcher for unsupported symbol (currency/token, e.g ETH
         SymbolNotFound,
+		Overflow,
 
         FetcherNotFound,
     }
@@ -184,7 +187,7 @@ pub mod pallet {
             ensure!(!<Fetchers<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExist);
 
             //TODO: duration should be param of function
-            let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(duration); //600 blocs is 1hour at 1 block/6s
+            let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(duration);
             let url = match SYMBOLS.iter().find(|(s, _)| s == &symbol) {
                 Some (p) => Ok(p.1),
                 None => Err(Error::<T>::SymbolNotFound)
@@ -275,23 +278,21 @@ impl<T: Config> Pallet<T> {
 
 		//TODO: add minimum samples count e.g avg price will be computed only if 100 samples was
 		//submitted. Otherwise it will fail
-		let price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
+		let mut price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
 
-		//TODO: clean up invalid prices
-		let mut sum: Price = Price::from(0);
-		let mut samples_count = Price::from(0);
-		price_points.iter().for_each(|pp| {
-			sum = sum + pp.price;
-			samples_count = samples_count + Price::from(1);
-		});
+		if price_points.len() < 100 {
+			return Err("Less than 100 samples were submitted.");
+		}
 
-		let avg_price = sum / samples_count;
+		price_points.sort_by(|a, b| b.price.cmp(&a.price));
+		//let median_price = price_points[price_points.len() / 2];
+		let median_price = price_points.get(price_points.len() / 2).unwrap().price;
 
 		let results = signer.send_signed_transaction(|_account| {
 			// Received price is wrapped into a call to `submit_price` public function of this pallet.
 			// This means that the transaction, when executed, will simply call that function passing
 			// `price` as an argument.
-			Call::submit_new_avg_price(fetcher.symbol.clone(), avg_price)
+			Call::submit_new_avg_price(fetcher.symbol.clone(), median_price)
 		});
 
 		for (acc, res) in &results {

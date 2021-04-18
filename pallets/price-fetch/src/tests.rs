@@ -16,7 +16,7 @@ fn parse_res_from_dia_should_work() {
 
 	let p = PriceFetch::parse_dia_res(data).unwrap();
 
-	assert_eq!(p.price, Price::from_fraction(17202.936692749197));
+	assert_eq!(p.price, Price::from_fraction(17202.000000000000000000));
 	assert_eq!(p.time, "2020-11-26T20:02:19.699386233Z".as_bytes());
 	assert_eq!(p.symbol, "BTC".as_bytes());
 
@@ -46,7 +46,7 @@ fn fetch_price_req_should_work() {
 	}
  
 	let p1 = DiaPriceRecord {
-		price: Price::from_fraction(599.5155962856843),
+		price: Price::from_fraction(599.000000000000000000),
 		time: b"2020-12-04T17:22:35.694940893Z".to_vec(),
 		symbol: b"ETH".to_vec(),
 	};
@@ -62,7 +62,7 @@ fn fetch_price_req_should_work() {
 fn start_new_fetcher_should_work() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		let symbol: &[u8; 3] = b"ETH";
-		let duration = 600u32;
+		let duration = 600u32; //600 blocs is 1hour at 1 block/6s
 		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
 
 		let key = b"ETH";
@@ -83,7 +83,7 @@ fn start_existing_fetcher_should_fail() {
 	sp_io::TestExternalities::default().execute_with(|| {
 		//assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default())));
 		let symbol: &[u8; 3] = b"ETH";
-		let duration = 600u32;
+		let duration = 600u32; //600 blocs is 1hour at 1 block/6s
 		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
 
 		assert_noop!(
