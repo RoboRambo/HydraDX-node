@@ -82,14 +82,16 @@ pub fn de_float_to_price<'de, D>(de: D) -> Result<Price, D::Error>
 where
 	D: Deserializer<'de>,
 {
+	use alt_serde::de::Error;
 	let fp: f64 = Deserialize::deserialize(de)?;
-
 	//TODO: CONST -> DECIMAL PLACES FOR PRICE.
 	//		This will depend on the type used in our case sp_runtime::FixedU128
 	//TODO: Make sure this doesn't overflow
-	//let result = (fp as u128).checked_mul(DECIMAL_DIGITS).ok_or(Error::Overflow)?;
 	let result = (fp as u128).checked_mul(DECIMAL_DIGITS);
-	Ok(Price::from_inner(result.unwrap()))
+	match result {
+		Some(result) => Ok(Price::from_inner(result)),
+		None => Err(Error::custom("Price Overflow"))
+	}
 }
 
 #[cfg(test)]
