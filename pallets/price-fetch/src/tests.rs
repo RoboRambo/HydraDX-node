@@ -16,7 +16,7 @@ fn parse_res_from_dia_should_work() {
 
 	let p = PriceFetch::parse_dia_res(data).unwrap();
 
-	assert_eq!(p.price, Price::from_fraction(17202.000000000000000000));
+	assert_eq!(p.price, Price::from_fraction(17202.936692749197));
 	assert_eq!(p.time, "2020-11-26T20:02:19.699386233Z".as_bytes());
 	assert_eq!(p.symbol, "BTC".as_bytes());
 
@@ -46,7 +46,7 @@ fn fetch_price_req_should_work() {
 	}
  
 	let p1 = DiaPriceRecord {
-		price: Price::from_fraction(599.000000000000000000),
+		price: Price::from_fraction(599.515596285684350976),
 		time: b"2020-12-04T17:22:35.694940893Z".to_vec(),
 		symbol: b"ETH".to_vec(),
 	};
@@ -136,7 +136,7 @@ fn add_new_price_to_storage_should_work() {
 }
 
 #[test]
-fn cal_avg_price_and_submit_should_work() {
+fn cal_median_price_and_submit_should_work() {
 	let mut _ext = new_test_ext();
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, pool_state) = testing::TestTransactionPoolExt::new();
@@ -197,7 +197,7 @@ fn cal_avg_price_and_submit_should_work() {
 			author: Default::default(),
 		});
 
-		let _result = PriceFetch::calc_and_submit_avg_price(Fetcher {
+		let _result = PriceFetch::calc_and_submit_median_price(Fetcher {
 			symbol: key.to_vec(),
 			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
 			end_fetching_at: 600,
@@ -214,11 +214,10 @@ fn cal_avg_price_and_submit_should_work() {
 		assert!(pool_state.read().transactions.is_empty());
 		let tx = mock::Extrinsic::decode(&mut &*tx).unwrap();
 		assert_eq!(tx.signature.unwrap().0, 0);
-		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_avg_price(key.clone(), avg)));
+		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_median_price(key.clone(), avg)));
         
 	})
 }
-
 
 /*
 #[test]

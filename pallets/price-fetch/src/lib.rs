@@ -37,7 +37,7 @@ pub type Symbol = Vec<u8>;
 //TODO: this should be a param to start_fetcher(symbol, duration) function
 //const SYM: &[u8; 3] = b"ETH";
 pub const SYMBOLS: [(&[u8], &[u8]); 1] = [(b"ETH", b"https://api.diadata.org/v1/quotation/ETH")];
-const DECIMAL_DIGITS: u128 = 1_000_000_000_000_000_000_u128;
+const DECIMAL_DIGITS: f64 = 1_000_000_000_000_000_000_f64;
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct Fetcher<BlockNumber> {
@@ -82,16 +82,12 @@ pub fn de_float_to_price<'de, D>(de: D) -> Result<Price, D::Error>
 where
 	D: Deserializer<'de>,
 {
-	use alt_serde::de::Error;
 	let fp: f64 = Deserialize::deserialize(de)?;
 	//TODO: CONST -> DECIMAL PLACES FOR PRICE.
 	//		This will depend on the type used in our case sp_runtime::FixedU128
 	//TODO: Make sure this doesn't overflow
-	let result = (fp as u128).checked_mul(DECIMAL_DIGITS);
-	match result {
-		Some(result) => Ok(Price::from_inner(result)),
-		None => Err(Error::custom("Price Overflow"))
-	}
+	let result = (fp * (DECIMAL_DIGITS)) as u128;
+	Ok(Price::from_inner(result))
 }
 
 #[cfg(test)]
@@ -139,8 +135,8 @@ pub mod pallet {
 		//New price point was saved from symbol
 		NewPricePoint(T::AccountId, Symbol, <T as pallet_timestamp::Config>::Moment, Price),
 
-		//New avg price was calculated and old fetcher was destroyed
-		NewAvgPrice(T::AccountId, Symbol, <T as pallet_timestamp::Config>::Moment, Price),
+		//New median price was calculated and old fetcher was destroyed
+		NewMedianPrice(T::AccountId, Symbol, <T as pallet_timestamp::Config>::Moment, Price),
     }
 
     #[pallet::error]
@@ -149,7 +145,6 @@ pub mod pallet {
         FetcherAlreadyExist,
         //start fetcher for unsupported symbol (currency/token, e.g ETH
         SymbolNotFound,
-		Overflow,
 
         FetcherNotFound,
     }
@@ -163,10 +158,10 @@ pub mod pallet {
 			//minimize storage access
 			<Fetchers<T>>::iter().for_each(|(_, f)| {
 
-				//TASK I.: check fetchers that should end - calculate avg, submit price, and clear
+				//TASK I.: check fetchers that should end - calculate median, submit price, and clear
 				//storage
 				if f.end_fetching_at <= block_number {
-					if let Err(e) = Self::calc_and_submit_avg_price(f) {
+					if let Err(e) = Self::calc_and_submit_median_price(f) {
 						debug::error!("Error: {}", e);
 					}
 				} else if block_number % T::GracePeriod::get() == 0u32.into() {
@@ -231,17 +226,17 @@ pub mod pallet {
         }
 
         #[pallet::weight((0, Pays::No))]
-		pub fn submit_new_avg_price(origin: OriginFor<T>, symbol: Symbol, avg_price:Price) -> DispatchResultWithPostInfo {
+		pub fn submit_new_median_price(origin: OriginFor<T>, symbol: Symbol, median_price:Price) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let now = <pallet_timestamp::Module<T>>::get();
-			<AvgPrices<T>>::insert(symbol.clone(), (now, avg_price, who.clone()));
+			<MedianPrices<T>>::insert(symbol.clone(), (now, median_price, who.clone()));
 
 			//delete finished fetcher and remove old data
 			let _old_fetcher = <Fetchers<T>>::take(symbol.clone());
 			let _old_prices = <FetchedPrices<T>>::take(symbol.clone());
 
-			Self::deposit_event(Event::NewAvgPrice(who, symbol, now, avg_price));
+			Self::deposit_event(Event::NewMedianPrice(who, symbol, now, median_price));
 
 			Ok(().into())
 		}
@@ -259,8 +254,8 @@ pub mod pallet {
 
 	///Map of aggregated prices
     #[pallet::storage]
-    #[pallet::getter(fn avg_price)]
-	pub type AvgPrices<T:Config> = StorageMap<_, Identity, Vec<u8>, (T::Moment, Price, T::AccountId), ValueQuery>;
+    #[pallet::getter(fn median_price)]
+	pub type MedianPrices<T:Config> = StorageMap<_, Identity, Vec<u8>, (T::Moment, Price, T::AccountId), ValueQuery>;
 }
 
 
@@ -272,13 +267,13 @@ impl<T: Config> Pallet<T> {
 	}
 
 	//NOTE: consider move to onf_finalize
-	fn calc_and_submit_avg_price(fetcher: Fetcher<T::BlockNumber>) -> Result<(), &'static str> {
+	fn calc_and_submit_median_price(fetcher: Fetcher<T::BlockNumber>) -> Result<(), &'static str> {
 		let signer = Signer::<T, T::AuthorityId>::all_accounts();
 		if !signer.can_sign() {
 			return Err("No local accounts available. Consider adding one via `author_insertKey` RPC.");
 		}
 
-		//TODO: add minimum samples count e.g avg price will be computed only if 100 samples was
+		//TODO: add minimum samples count e.g median price will be computed only if 100 samples was
 		//submitted. Otherwise it will fail
 		let mut price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
 
@@ -287,14 +282,13 @@ impl<T: Config> Pallet<T> {
 		}
 
 		price_points.sort_by(|a, b| b.price.cmp(&a.price));
-		//let median_price = price_points[price_points.len() / 2];
 		let median_price = price_points.get(price_points.len() / 2).unwrap().price;
 
 		let results = signer.send_signed_transaction(|_account| {
 			// Received price is wrapped into a call to `submit_price` public function of this pallet.
 			// This means that the transaction, when executed, will simply call that function passing
 			// `price` as an argument.
-			Call::submit_new_avg_price(fetcher.symbol.clone(), median_price)
+			Call::submit_new_median_price(fetcher.symbol.clone(), median_price)
 		});
 
 		for (acc, res) in &results {
