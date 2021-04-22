@@ -274,7 +274,6 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::NoLocalAccountsAvailable
 		);
 
-
 		let mut price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
 
 		ensure!(

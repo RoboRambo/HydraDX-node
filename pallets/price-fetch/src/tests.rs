@@ -190,7 +190,7 @@ fn cal_median_price_and_submit_should_work() {
 }
 
 #[test]
-fn cal_median_price_and_submit_should_not_work() {
+fn cal_median_price_and_submit_should_fail() {
 	let mut _ext = new_test_ext();
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, pool_state) = testing::TestTransactionPoolExt::new();
@@ -226,6 +226,64 @@ fn cal_median_price_and_submit_should_not_work() {
 			end_fetching_at: 600,
 			}),
 			Error::<Test>::MinimalPriceSampleRequirementNotMet
+		);
+
+		assert!(pool_state.read().transactions.is_empty());
+	})
+}
+
+#[test]
+fn cal_median_price_and_submit_should_fail2() {
+	let mut _ext = new_test_ext();
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, pool_state) = testing::TestTransactionPoolExt::new();
+
+	let keystore = KeyStore::new();
+
+	let mut t = sp_io::TestExternalities::default();
+	t.register_extension(OffchainExt::new(offchain));
+	t.register_extension(TransactionPoolExt::new(pool));
+	t.register_extension(KeystoreExt(Arc::new(keystore)));
+
+	t.execute_with(|| {
+		let key = b"ETH".to_vec();
+
+		assert_noop!(
+			PriceFetch::calc_and_submit_median_price(Fetcher {
+			symbol: key.to_vec(),
+			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
+			end_fetching_at: 600,
+			}),
+			Error::<Test>::NoLocalAccountsAvailable
+		);
+
+		assert!(pool_state.read().transactions.is_empty());
+	})
+}
+
+#[test]
+fn fetch_price_and_submit_should_fail() {
+	let mut _ext = new_test_ext();
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, pool_state) = testing::TestTransactionPoolExt::new();
+
+	let keystore = KeyStore::new();
+
+	let mut t = sp_io::TestExternalities::default();
+	t.register_extension(OffchainExt::new(offchain));
+	t.register_extension(TransactionPoolExt::new(pool));
+	t.register_extension(KeystoreExt(Arc::new(keystore)));
+
+	t.execute_with(|| {
+		let key = b"ETH".to_vec();
+
+		assert_noop!(
+			PriceFetch::fetch_price_and_submit(Fetcher {
+			symbol: key.to_vec(),
+			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
+			end_fetching_at: 600,
+			}),
+			Error::<Test>::NoLocalAccountsAvailable
 		);
 
 		assert!(pool_state.read().transactions.is_empty());
