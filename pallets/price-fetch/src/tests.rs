@@ -219,12 +219,6 @@ fn cal_median_price_and_submit_should_not_work() {
 			author: Default::default(),
 		});
 
-		let _result = PriceFetch::calc_and_submit_median_price(Fetcher {
-			symbol: key.to_vec(),
-			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
-			end_fetching_at: 600,
-		});
-
 		assert_noop!(
 			PriceFetch::calc_and_submit_median_price(Fetcher {
 			symbol: key.to_vec(),

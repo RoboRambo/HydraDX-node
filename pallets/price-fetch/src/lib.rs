@@ -144,6 +144,7 @@ pub mod pallet {
         //start fetcher for unsupported symbol (currency/token, e.g ETH
         SymbolNotFound,
 		MinimalPriceSampleRequirementNotMet,
+		NoLocalAccountsAvailable,
 
         FetcherNotFound,
     }
@@ -268,9 +269,11 @@ impl<T: Config> Pallet<T> {
 	//NOTE: consider move to onf_finalize
 	fn calc_and_submit_median_price(fetcher: Fetcher<T::BlockNumber>) -> Result<(), &'static str> {
 		let signer = Signer::<T, T::AuthorityId>::all_accounts();
-		if !signer.can_sign() {
-			return Err("No local accounts available. Consider adding one via `author_insertKey` RPC.");
-		}
+		ensure!(
+			signer.can_sign(),
+			Error::<T>::NoLocalAccountsAvailable
+		);
+
 
 		let mut price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
 
@@ -301,9 +304,10 @@ impl<T: Config> Pallet<T> {
 
 	fn fetch_price_and_submit(fetcher: Fetcher<T::BlockNumber>) -> Result<(), &'static str> {
 		let signer = Signer::<T, T::AuthorityId>::all_accounts();
-		if !signer.can_sign() {
-			return Err("No local accounts available. Consider adding one via `author_insertKey` RPC.");
-		}
+		ensure!(
+			signer.can_sign(),
+			Error::<T>::NoLocalAccountsAvailable
+		);
 
 		//NOTE: Blocking http request
 		let fetched_price = Self::fetch_price(fetcher.url).map_err(|_| "Failed to fetch data")?;
