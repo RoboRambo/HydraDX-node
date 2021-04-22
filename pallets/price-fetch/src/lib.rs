@@ -23,7 +23,7 @@ use codec::{Decode, Encode};
 use sp_core::crypto::KeyTypeId;
 use sp_std::vec::Vec;
 use primitives::Price;
-use frame_support::debug;
+use frame_support::{debug, ensure};
 use frame_system::{
     ensure_signed,
     offchain::{Signer, SendSignedTransaction, CreateSignedTransaction}
@@ -34,8 +34,6 @@ use alt_serde::{Deserialize, Deserializer};
 
 pub type Symbol = Vec<u8>;
 
-//TODO: this should be a param to start_fetcher(symbol, duration) function
-//const SYM: &[u8; 3] = b"ETH";
 pub const SYMBOLS: [(&[u8], &[u8]); 1] = [(b"ETH", b"https://api.diadata.org/v1/quotation/ETH")];
 const DECIMAL_DIGITS: f64 = 1_000_000_000_000_000_000_f64;
 
@@ -145,6 +143,7 @@ pub mod pallet {
         FetcherAlreadyExist,
         //start fetcher for unsupported symbol (currency/token, e.g ETH
         SymbolNotFound,
+		MinimalPriceSampleRequirementNotMet,
 
         FetcherNotFound,
     }
@@ -273,13 +272,12 @@ impl<T: Config> Pallet<T> {
 			return Err("No local accounts available. Consider adding one via `author_insertKey` RPC.");
 		}
 
-		//TODO: add minimum samples count e.g median price will be computed only if 100 samples was
-		//submitted. Otherwise it will fail
 		let mut price_points = <FetchedPrices<T>>::get(fetcher.symbol.clone());
 
-		if price_points.len() < 100 {
-			return Err("Less than 100 samples were submitted.");
-		}
+		ensure!(
+			price_points.len() >= 100,
+			Error::<T>::MinimalPriceSampleRequirementNotMet
+		);
 
 		price_points.sort_by(|a, b| b.price.cmp(&a.price));
 		let median_price = price_points.get(price_points.len() / 2).unwrap().price;

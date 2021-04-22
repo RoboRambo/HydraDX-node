@@ -162,38 +162,60 @@ fn cal_median_price_and_submit_should_work() {
 		]
 		.to_vec();
 
+		for x in 0..100 {
+			PriceFetch::add_new_price_to_list(FetchedPrice {
+				//price: Price::from(prices[0]),
+				price: Price::from(prices[x % 5]),
+				symbol: key.clone(),
+				time: "2020-11-26T20:02:19.699386233Z".as_bytes().to_vec(),
+				author: Default::default(),
+			});
+		}
+
+		let _result = PriceFetch::calc_and_submit_median_price(Fetcher {
+			symbol: key.to_vec(),
+			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
+			end_fetching_at: 600,
+		});
+
+		let median = prices[4];
+
+		let tx = pool_state.write().transactions.pop().unwrap();
+		assert!(pool_state.read().transactions.is_empty());
+		let tx = mock::Extrinsic::decode(&mut &*tx).unwrap();
+		assert_eq!(tx.signature.unwrap().0, 0);
+		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_median_price(key.clone(), median)));
+        
+	})
+}
+
+#[test]
+fn cal_median_price_and_submit_should_not_work() {
+	let mut _ext = new_test_ext();
+	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, pool_state) = testing::TestTransactionPoolExt::new();
+
+	const PHRASE: &str = "news slush supreme milk chapter athlete soap sausage put clutch what kitten";
+
+	let keystore = KeyStore::new();
+	SyncCryptoStore::sr25519_generate_new(&keystore, KEY_TYPE, Some(&format!("{}/hunter1", PHRASE))).unwrap();
+
+	let mut t = sp_io::TestExternalities::default();
+	t.register_extension(OffchainExt::new(offchain));
+	t.register_extension(TransactionPoolExt::new(pool));
+	t.register_extension(KeystoreExt(Arc::new(keystore)));
+
+	t.execute_with(|| {
+		let key = b"ETH".to_vec();
+		let prices: Vec<Price> = [
+			Price::from_fraction(1232.032342323423),
+		]
+		.to_vec();
+
 		PriceFetch::add_new_price_to_list(FetchedPrice {
 			price: Price::from(prices[0]),
 			symbol: key.clone(),
 			time: "2020-11-26T20:02:19.699386233Z".as_bytes().to_vec(),
-			author: Default::default(),
-		});
-
-		PriceFetch::add_new_price_to_list(FetchedPrice {
-			price: Price::from(prices[1]),
-			symbol: key.clone(),
-			time: "2020-11-26T20:03:19.699386233Z".as_bytes().to_vec(),
-			author: Default::default(),
-		});
-
-		PriceFetch::add_new_price_to_list(FetchedPrice {
-			price: Price::from(prices[2]),
-			symbol: key.clone(),
-			time: "2020-11-26T20:04:19.699386233Z".as_bytes().to_vec(),
-			author: Default::default(),
-		});
-
-		PriceFetch::add_new_price_to_list(FetchedPrice {
-			price: Price::from(prices[3]),
-			symbol: key.clone(),
-			time: "2020-11-26T20:05:19.699386233Z".as_bytes().to_vec(),
-			author: Default::default(),
-		});
-
-		PriceFetch::add_new_price_to_list(FetchedPrice {
-			price: Price::from(prices[4]),
-			symbol: key.clone(),
-			time: "2020-11-26T20:06:19.699386233Z".as_bytes().to_vec(),
 			author: Default::default(),
 		});
 
@@ -203,19 +225,16 @@ fn cal_median_price_and_submit_should_work() {
 			end_fetching_at: 600,
 		});
 
-		let mut sum = Price::from(0);
-		prices.iter().for_each(|price| {
-			sum = sum + price.clone();
-		});
+		assert_noop!(
+			PriceFetch::calc_and_submit_median_price(Fetcher {
+			symbol: key.to_vec(),
+			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
+			end_fetching_at: 600,
+			}),
+			Error::<Test>::MinimalPriceSampleRequirementNotMet
+		);
 
-		let avg = sum / Price::from(5);
-
-		let tx = pool_state.write().transactions.pop().unwrap();
 		assert!(pool_state.read().transactions.is_empty());
-		let tx = mock::Extrinsic::decode(&mut &*tx).unwrap();
-		assert_eq!(tx.signature.unwrap().0, 0);
-		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_median_price(key.clone(), avg)));
-        
 	})
 }
 
