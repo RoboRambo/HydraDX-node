@@ -72,9 +72,11 @@ fn start_new_fetcher_should_work() {
 			end_fetching_at: 600,
 		};
 
-		let fetcher = <Fetchers<Test>>::get(&key.to_vec());
+		let actual_symbol = <FetchersMap<Test>>::get(&should_be_fetcher.symbol);
+		//let actual_fetcher = <Fetchers<Test>>::get().pop().unwrap();
 
-		assert_eq!(fetcher, should_be_fetcher);
+		assert!(actual_symbol.eq(key));
+		//assert_eq!(actual_fetcher, should_be_fetcher);
 	})
 }
 
@@ -176,7 +178,7 @@ fn cal_median_price_and_submit_should_work() {
 			symbol: key.to_vec(),
 			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
 			end_fetching_at: 600,
-		});
+		}, 0u32);
 
 		let median = prices[4];
 
@@ -184,7 +186,7 @@ fn cal_median_price_and_submit_should_work() {
 		assert!(pool_state.read().transactions.is_empty());
 		let tx = mock::Extrinsic::decode(&mut &*tx).unwrap();
 		assert_eq!(tx.signature.unwrap().0, 0);
-		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_median_price(key.clone(), median)));
+		assert_eq!(tx.call, mock::Call::PriceFetch(crate::Call::submit_new_median_price(key.clone(), median, 0u32)));
         
 	})
 }
@@ -224,7 +226,7 @@ fn cal_median_price_and_submit_should_fail() {
 			symbol: key.to_vec(),
 			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
 			end_fetching_at: 600,
-			}),
+			}, 0u32),
 			Error::<Test>::MinimalPriceSampleRequirementNotMet
 		);
 
@@ -253,7 +255,7 @@ fn cal_median_price_and_submit_should_fail2() {
 			symbol: key.to_vec(),
 			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
 			end_fetching_at: 600,
-			}),
+			}, 0u32),
 			Error::<Test>::NoLocalAccountsAvailable
 		);
 

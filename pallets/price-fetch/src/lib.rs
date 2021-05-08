@@ -156,34 +156,29 @@ pub mod pallet {
 
 			//NOTE: for higher amount of fetchers it would be better to use different storage structure to
 			//minimize storage access
-			<Fetchers<T>>::iter().for_each(|(_, f)| {
-
-				//TASK I.: check fetchers that should end - calculate median, submit price, and clear
-				//storage
+			for (pos, f) in <Fetchers<T>>::get().iter().enumerate() {
 				if f.end_fetching_at <= block_number {
-					if let Err(e) = Self::calc_and_submit_median_price(f) {
+					if let Err(e) = Self::calc_and_submit_median_price(f.clone(), pos as u32) {
 						debug::error!("Error: {}", e);
 					}
 				} else if block_number % T::GracePeriod::get() == 0u32.into() {
 					//TASK II.: Fetch and submit price
-					if let Err(e) = Self::fetch_price_and_submit(f) {
+					if let Err(e) = Self::fetch_price_and_submit(f.clone()) {
 						debug::error!("Error: {}", e);
 					}
 				}
-			});
+			}
 		}
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         ///Start fetching price for 600 blocks
-        //TODO: add fetched duration and symbol
         #[pallet::weight((0, Pays::No))]
         pub fn start_fetcher(origin: OriginFor<T>, symbol: [u8; 3], duration: u32) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(!<Fetchers<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExist);
+            ensure!(!<FetchersMap<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExist);
 
-            //TODO: duration should be param of function
             let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(duration);
             let url = match SYMBOLS.iter().find(|(s, _)| s == &symbol) {
                 Some (p) => Ok(p.1),
@@ -196,19 +191,20 @@ pub mod pallet {
                 url: url.to_vec()
             };
 
-            <Fetchers<T>>::insert(symbol.to_vec(), new_fetcher);
+			<Fetchers<T>>::get().push(new_fetcher);
+			<FetchersMap<T>>::insert(symbol.to_vec(), symbol.to_vec());
 
             let now = <pallet_timestamp::Pallet<T>>::get();
             Self::deposit_event(Event::NewFetcher(who, symbol.to_vec(), now));
 
             Ok(().into())
         }
-    
+
         #[pallet::weight((0, Pays::No))]
         pub fn submit_new_price(origin: OriginFor<T>, price_record: DiaPriceRecord) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
-            ensure!(<Fetchers<T>>::contains_key(&price_record.symbol), Error::<T>::FetcherNotFound);
+            ensure!(<FetchersMap<T>>::contains_key(&price_record.symbol), Error::<T>::FetcherNotFound);
 
             let new_price = FetchedPrice {
                 price: price_record.price,
@@ -226,14 +222,16 @@ pub mod pallet {
         }
 
         #[pallet::weight((0, Pays::No))]
-		pub fn submit_new_median_price(origin: OriginFor<T>, symbol: Symbol, median_price:Price) -> DispatchResultWithPostInfo {
+		pub fn submit_new_median_price(origin: OriginFor<T>, symbol: Symbol, median_price:Price, index: u32) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let now = <pallet_timestamp::Module<T>>::get();
 			<MedianPrices<T>>::insert(symbol.clone(), (now, median_price, who.clone()));
 
 			//delete finished fetcher and remove old data
-			let _old_fetcher = <Fetchers<T>>::take(symbol.clone());
+			<Fetchers<T>>::get().remove(index as usize);
+			<FetchersMap<T>>::take(symbol.clone());
+
 			let _old_prices = <FetchedPrices<T>>::take(symbol.clone());
 
 			Self::deposit_event(Event::NewMedianPrice(who, symbol, now, median_price));
@@ -242,10 +240,17 @@ pub mod pallet {
 		}
     }
 
-	///Map of currently running fetchers
+	///Vec of currently running fetchers
+	///used for iterations to minimize storage access
     #[pallet::storage]
     #[pallet::getter(fn fetcher)]
-	pub type Fetchers<T: Config> = StorageMap<_, Identity, Vec<u8>, Fetcher<T::BlockNumber>, ValueQuery>;
+	pub type Fetchers<T: Config> = StorageValue<_, Vec<Fetcher<T::BlockNumber>>, ValueQuery>;
+
+	///Map of currently running fetchers
+	///used for contains to minimize runtime
+	#[pallet::storage]
+	#[pallet::getter(fn fetcher_map)]
+	pub type FetchersMap<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, ValueQuery>;
 
     ///Map of raw fetched_prices from oracle. Key is hash of symbol e.g hash('ETH')
     #[pallet::storage]
@@ -267,7 +272,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	//NOTE: consider move to onf_finalize
-	fn calc_and_submit_median_price(fetcher: Fetcher<T::BlockNumber>) -> Result<(), &'static str> {
+	fn calc_and_submit_median_price(fetcher: Fetcher<T::BlockNumber>, index: u32) -> Result<(), &'static str> {
 		let signer = Signer::<T, T::AuthorityId>::all_accounts();
 		ensure!(
 			signer.can_sign(),
@@ -288,7 +293,7 @@ impl<T: Config> Pallet<T> {
 			// Received price is wrapped into a call to `submit_price` public function of this pallet.
 			// This means that the transaction, when executed, will simply call that function passing
 			// `price` as an argument.
-			Call::submit_new_median_price(fetcher.symbol.clone(), median_price)
+			Call::submit_new_median_price(fetcher.symbol.clone(), median_price, index)
 		});
 
 		for (acc, res) in &results {
