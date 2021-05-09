@@ -23,7 +23,7 @@ version = '2.0.0'
 [dependencies]
 hex-literal = {optional = true, version = '0.3.1'}
 serde = {features = ['derive'], optional = true, version = '1.0.101'}
-tracing-core = {optional = true, version = '0.1.17'}
+tracing-core = {optional = true, version = '0.1.18'}
 
 # local dependencies
 module-amm-rpc-runtime-api = {path = '../pallets/amm/rpc/runtime-api', default-features = false}
