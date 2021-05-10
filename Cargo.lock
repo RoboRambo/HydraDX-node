@@ -2487,7 +2487,7 @@ dependencies = [
  "sp-std",
  "sp-transaction-pool",
  "sp-version",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
  "tracing-core",
 ]
 
@@ -3798,7 +3798,7 @@ dependencies = [
  "sp-blockchain",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 3.0.0",
 ]
 
 [[package]]
@@ -3810,7 +3810,7 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 3.0.0",
 ]
 
 [[package]]
@@ -4168,7 +4168,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
 ]
 
 [[package]]
@@ -4185,7 +4185,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
 ]
 
 [[package]]
@@ -4379,7 +4379,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
 ]
 
 [[package]]
@@ -4402,7 +4402,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 3.0.0",
 ]
 
 [[package]]
@@ -4421,7 +4421,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 3.0.0",
 ]
 
 [[package]]
@@ -4518,7 +4518,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 3.0.0",
 ]
 
 [[package]]
@@ -4685,7 +4685,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
 ]
 
 [[package]]
@@ -5244,7 +5244,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "substrate-fixed",
- "substrate-wasm-builder",
+ "substrate-wasm-builder 4.0.0",
 ]
 
 [[package]]
@@ -7985,6 +7985,22 @@ name = "substrate-wasm-builder"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79091baab813855ddf65b191de9fe53e656b6b67c1e9bd23fdcbff8788164684"
+dependencies = [
+ "ansi_term 0.12.1",
+ "atty",
+ "build-helper",
+ "cargo_metadata",
+ "tempfile",
+ "toml",
+ "walkdir",
+ "wasm-gc-api",
+]
+
+[[package]]
+name = "substrate-wasm-builder"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93a3d51ad6abbc408b03ea962062bfcc959b438a318d7d4bedd181e1effd0610"
 dependencies = [
  "ansi_term 0.12.1",
  "atty",

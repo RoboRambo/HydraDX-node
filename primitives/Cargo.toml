@@ -5,7 +5,7 @@ name = 'primitives'
 version = '3.0.0'
 
 [build-dependencies]
-substrate-wasm-builder = {package = 'substrate-wasm-builder', version = '3.0.0'}
+substrate-wasm-builder = {package = 'substrate-wasm-builder', version = '4.0.0'}
 
 # alias "parity-scale-code" to "codec"
 [dependencies.codec]
