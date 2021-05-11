@@ -140,7 +140,7 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         //Fetcher for required symbol is already running
-        FetcherAlreadyExist,
+		FetcherAlreadyExists,
         //start fetcher for unsupported symbol (currency/token, e.g ETH
         SymbolNotFound,
 		MinimalPriceSampleRequirementNotMet,
@@ -177,7 +177,7 @@ pub mod pallet {
         #[pallet::weight((0, Pays::No))]
         pub fn start_fetcher(origin: OriginFor<T>, symbol: [u8; 3], duration: u32) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(!<FetchersMap<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExist);
+            ensure!(!<FetchersMap<T>>::contains_key(&symbol.to_vec()), Error::<T>::FetcherAlreadyExists);
 
             let end_at = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(duration);
             let url = match SYMBOLS.iter().find(|(s, _)| s == &symbol) {

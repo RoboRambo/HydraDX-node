@@ -89,7 +89,7 @@ fn start_existing_fetcher_should_fail() {
 
 		assert_noop!(
 			PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration),
-			Error::<Test>::FetcherAlreadyExist
+			Error::<Test>::FetcherAlreadyExists
 		);
 	})
 }
@@ -288,6 +288,20 @@ fn fetch_price_and_submit_should_fail() {
 		);
 
 		assert!(pool_state.read().transactions.is_empty());
+	})
+}
+
+#[test]
+fn submit_new_price_should_fail() {
+	let mut t = sp_io::TestExternalities::default();
+	t.execute_with(|| {
+		let p1 = DiaPriceRecord {
+			price: Price::from_fraction(1.0),
+			time: b"Foo".to_vec(),
+			symbol: b"Bar".to_vec(),
+		};
+		assert_noop!(PriceFetch::submit_new_price(Origin::signed(Default::default()), p1),
+			Error::<Test>::FetcherNotFound);
 	})
 }
 
