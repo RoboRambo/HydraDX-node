@@ -73,17 +73,16 @@ fn start_new_fetcher_should_work() {
 		};
 
 		let actual_symbol = <FetchersMap<Test>>::get(&should_be_fetcher.symbol);
-		//let actual_fetcher = <Fetchers<Test>>::get().pop().unwrap();
+		let actual_fetcher = <Fetchers<Test>>::get().pop().unwrap();
 
 		assert!(actual_symbol.eq(key));
-		//assert_eq!(actual_fetcher, should_be_fetcher);
+		assert_eq!(actual_fetcher, should_be_fetcher);
 	})
 }
 
 #[test]
 fn start_existing_fetcher_should_fail() {
 	sp_io::TestExternalities::default().execute_with(|| {
-		//assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default())));
 		let symbol: &[u8; 3] = b"ETH";
 		let duration = 600u32; //600 blocs is 1hour at 1 block/6s
 		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
@@ -289,6 +288,34 @@ fn fetch_price_and_submit_should_fail() {
 		);
 
 		assert!(pool_state.read().transactions.is_empty());
+	})
+}
+
+#[test]
+fn submit_new_median_price_should_remove_fetchers() {
+	let mut t = sp_io::TestExternalities::default();
+	t.execute_with(|| {
+		let symbol: &[u8; 3] = b"ETH";
+		let duration = 600u32; //600 blocs is 1hour at 1 block/6s
+		assert_ok!(PriceFetch::start_fetcher(Origin::signed(Default::default()), *symbol, duration));
+
+		let key = b"ETH";
+		let should_be_fetcher = Fetcher {
+			symbol: key.to_vec(),
+			url: b"https://api.diadata.org/v1/quotation/ETH".to_vec(),
+			end_fetching_at: 600,
+		};
+
+		assert!(<FetchersMap<Test>>::get(&should_be_fetcher.symbol).eq(key));
+		assert_eq!(<Fetchers<Test>>::get().pop().unwrap(), should_be_fetcher);
+
+		assert_ok!(PriceFetch::submit_new_median_price(Origin::signed(Default::default()), (*symbol).to_vec(), Price::from(10), 0));
+
+		let actual_symbol = <FetchersMap<Test>>::get(&should_be_fetcher.symbol);
+		let actual_fetcher = <Fetchers<Test>>::get().pop();
+
+		assert_eq!(actual_symbol.len(), 0);
+		assert!(actual_fetcher.is_none());
 	})
 }
 

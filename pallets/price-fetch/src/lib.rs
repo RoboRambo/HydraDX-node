@@ -191,7 +191,9 @@ pub mod pallet {
                 url: url.to_vec()
             };
 
-			<Fetchers<T>>::get().push(new_fetcher);
+			let mut fetchers = <Fetchers<T>>::get();
+			fetchers.push(new_fetcher);
+			<Fetchers<T>>::put(fetchers);
 			<FetchersMap<T>>::insert(symbol.to_vec(), symbol.to_vec());
 
             let now = <pallet_timestamp::Pallet<T>>::get();
@@ -222,14 +224,16 @@ pub mod pallet {
         }
 
         #[pallet::weight((0, Pays::No))]
-		pub fn submit_new_median_price(origin: OriginFor<T>, symbol: Symbol, median_price:Price, index: u32) -> DispatchResultWithPostInfo {
+		pub fn submit_new_median_price(origin: OriginFor<T>, symbol: Symbol, median_price: Price, index: u32) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
 			let now = <pallet_timestamp::Module<T>>::get();
 			<MedianPrices<T>>::insert(symbol.clone(), (now, median_price, who.clone()));
 
 			//delete finished fetcher and remove old data
-			<Fetchers<T>>::get().remove(index as usize);
+			let mut fetchers = <Fetchers<T>>::get();
+			fetchers.remove(index as usize);
+			<Fetchers<T>>::put(fetchers);
 			<FetchersMap<T>>::take(symbol.clone());
 
 			let _old_prices = <FetchedPrices<T>>::take(symbol.clone());
