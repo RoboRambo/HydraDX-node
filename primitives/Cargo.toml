@@ -18,7 +18,7 @@ version = '2.0.0'
 substrate-fixed = {git="https://github.com/encointer/substrate-fixed", default-features = false, version = '0.5.6'}
 
 primitive-types = {default-features = false, version = '0.8.0'}
-serde = {features = ['derive'], optional = true, version = '1.0.101'}
+serde = {features = ['derive'], optional = true, version = '1.0.126'}
 
 # Substrate dependencies
 frame-support = {default-features = false, version = '3.0.0'}
