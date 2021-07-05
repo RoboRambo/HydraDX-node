@@ -23,7 +23,7 @@ sp-runtime = { default-features = false, version = '3.0.0' }
 derive_more = "0.99.11"
 
 [dev-dependencies]
-hex-literal = '0.3.1'
+hex-literal = '0.3.2'
 
 [features]
 default = ['std']
