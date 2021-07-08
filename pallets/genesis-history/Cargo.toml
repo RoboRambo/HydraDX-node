@@ -20,7 +20,7 @@ sp-std = {default-features = false, version = '3.0.0'}
 sp-core = {default-features = false, version = '3.0.0'}
 sp-io = { default-features = false, version = '3.0.0' }
 sp-runtime = { default-features = false, version = '3.0.0' }
-derive_more = "0.99.11"
+derive_more = "0.99.16"
 
 [dev-dependencies]
 hex-literal = '0.3.1'
